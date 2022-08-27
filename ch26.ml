@@ -19,7 +19,7 @@ let rec of_digits = function
  *)
 let rec push_least_larger x = function
     | y::z::xs -> if z <= x then z::xs @ [y]
-                  else y :: push_larger x (z::xs)
+                  else y :: push_least_larger x (z::xs)
     | xs       -> xs
 
 let next xs =
