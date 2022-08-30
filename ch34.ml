@@ -19,9 +19,8 @@ let to_int seq =
     Seq.fold_left f 0 seq
 
 let to_mins str =
-    let digit c = int_of_char c - int_of_char '0' in
-    let h = digit (String.get str 0) * 10 + digit (String.get str 1) in 
-    let m = digit (String.get str 3) * 10 + digit (String.get str 4) in 
+    let h = String.sub str 0 2 |> String.to_seq |> to_int in
+    let m = String.sub str 3 2 |> String.to_seq |> to_int in
     h * 60 + m
 
 (* for debugging *)
@@ -39,8 +38,8 @@ type station = Station of string * (string * int) option * (string * string * in
 
 (* Compares two names of the form "r123" by their number parts *)
 let route_less r1 r2 =
-    let n1 = to_int (String.to_seq r1 |> Seq.drop 1)
-    and n2 = to_int (String.to_seq r2 |> Seq.drop 1)
+    let n1 = String.to_seq r1 |> Seq.drop 1 |> to_int
+    and n2 = String.to_seq r2 |> Seq.drop 1 |> to_int
     in n1 < n2
 
 (* Inserts train t into the waiting queue *)
@@ -66,6 +65,16 @@ let rec enter_queue t sname = function
                 let queue' = insert_queue t queue in
                 Station (name, train_in, queue') :: ss
    
+(* Is the train at or outside a station? *)
+let rec occupied tname = function
+    | [] -> false
+    | Station (_, train_in, queue) :: ss ->
+            occupied tname ss ||
+            List.exists (fun (name, _, _) -> name = tname) queue ||
+            match train_in with
+            | None           -> false
+            | Some (name, _) -> name = tname
+
 (* Handles the arrival of trains at the specified time *)
 let arrive time ts ss =
     let rec f ss acc = function
@@ -74,7 +83,7 @@ let arrive time ts ss =
                 match nexts with
                 | [] -> f ss (t :: acc) ts
                 | (s, time') :: ns ->
-                        if time' <> time then
+                        if time' <> time || occupied name ss then
                             f ss (t :: acc) ts
                         else begin
                             print_string "Train "; print_string name;
@@ -194,7 +203,12 @@ let answer =
         print_string "["; print_string (to_time time); print_endline "]";
         let ts, ss = arrive time ts ss in
         let ss, finishing = depart ts ss in
-        let finish_times = List.map (fun t -> time - start_time input t) finishing in
+        let compute_time t =
+            let d = time - start_time input t in
+            print_string "Completion time for "; print_string t;
+            print_string ": "; print_int d; print_newline ();
+            d in
+        let finish_times = List.map compute_time finishing in
         max_time := List.fold_left max !max_time finish_times;
         let ts, ss = enter_station time ts ss in
         if not (finished ts ss) then
