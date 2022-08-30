@@ -1,10 +1,16 @@
-(* #use "ch34-input.ml";; *)
+#use "ch34-input.ml";;
 
+(*
 let input = [|[|"station";"r1";"r2";"r3"|];
               [|"a";"00:01";"";"00:02"|];
               [|"b";"00:16";"";"00:17"|];
               [|"c";"";"00:21";""|];
               [|"d";"00:46";"00:51";"00:47"|]|]
+*)
+
+let to_int seq =
+    let f n c = n * 10 + int_of_char c - int_of_char '0' in
+    Seq.fold_left f 0 seq
 
 let to_mins str =
     let digit c = int_of_char c - int_of_char '0' in
@@ -12,11 +18,24 @@ let to_mins str =
     let m = digit (String.get str 3) * 10 + digit (String.get str 4) in 
     h * 60 + m
 
+(* for debugging *)
+let to_time mins =
+    let h = (mins / 60) mod 24 in
+    let m = mins mod 60 in
+    let d n = char_of_int (int_of_char '0' + n) |> String.make 1 in
+    d (h / 10) ^ d (h mod 10) ^ ":" ^ d (m / 10) ^ d (m mod 10)
+
 (* name, last_station, [(station, time); ...] *)
 type train = Train of string * string * (string * int) list
 
 (* name, Some (train, time_in), [(waiting_train_name, last_station, original_time); ...] *)
 type station = Station of string * (string * int) option * (string * string * int) list
+
+(* Compares two names of the form "r123" by their number parts *)
+let route_less r1 r2 =
+    let n1 = to_int (String.to_seq r1 |> Seq.drop 1)
+    and n2 = to_int (String.to_seq r2 |> Seq.drop 1)
+    in n1 < n2
 
 (* Inserts train t into the waiting queue *)
 let rec insert_queue t qs =
@@ -26,7 +45,7 @@ let rec insert_queue t qs =
             match qs with
             | [] -> [(name, last, time)]
             | (n, l, _) as q :: qs ->
-                    if last < l || last = l && name < n then
+                    if last < l || last = l && route_less name n then
                         (name, last, time) :: q :: qs
                     else
                         q :: insert_queue t qs
@@ -166,7 +185,7 @@ let answer =
     let ss = init_stations input in
     let max_time = ref 0 in
     let rec process ts ss time =
-        print_string "["; print_int time; print_endline "]";
+        print_string "["; print_string (to_time time); print_endline "]";
         let ts, ss = arrive time ts ss in
         let ss, finishing = depart ts ss in
         let finish_times = List.map (fun t -> time - start_time input t) finishing in
