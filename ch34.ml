@@ -1,4 +1,10 @@
-#use "ch34-input.ml";;
+let input =
+    let process line = String.split_on_char ',' line |> Array.of_list in
+    let f = open_in "trains.csv" in
+    let rec loop xs =
+        try loop (process (input_line f) :: xs)
+        with End_of_file -> close_in f; xs
+    in loop [] |> List.rev |> Array.of_list
 
 (*
 let input = [|[|"station";"r1";"r2";"r3"|];
