@@ -86,8 +86,7 @@ let arrive time ts ss =
                         if time' <> time || occupied name ss then
                             f ss (t :: acc) ts
                         else begin
-                            print_string "Train "; print_string name;
-                            print_string " enters the queue at "; print_endline s;
+                            print_endline ("Train " ^ name ^ " enters the queue at " ^ s);
                             let ss' = enter_queue t s ss in
                             f ss' (Train (name, s, ns) :: acc) ts
                         end
@@ -114,8 +113,7 @@ let enter_station time ts ss =
         | Station (_, None, []) as s :: ss ->
                 f ts (s :: acc) ss
         | Station (name, None, (t, _, time')::queue) :: ss ->
-                print_string "Train "; print_string t;
-                print_string " enters station "; print_endline name;
+                print_endline ("Train " ^ t ^ " enters station " ^ name);
                 let s' = Station (name, Some (t, 1), queue) in
                 let ts' = wait (time - time' + 5) t ts in
                 f ts' (s' :: acc) ss
@@ -142,13 +140,11 @@ let depart ts ss =
                 let s' = Station (name, Some (t, n + 1), queue) in
                 f finished (s' :: acc) ss
             else begin
-                print_string "Train "; print_string t;
-                print_string " departs station "; print_endline name;
+                print_endline ("Train " ^ t ^ " departs station " ^ name);
                 let s' = Station (name, None, queue) in
                 if completed_journey t ts then
                     begin
-                        print_string "Train "; print_string t;
-                        print_endline " completes its journey";
+                        print_endline ("Train " ^ t ^ " completes its journey");
                         f (t :: finished) (s' :: acc) ss
                     end
                 else
@@ -200,13 +196,13 @@ let answer =
     let ss = init_stations input in
     let max_time = ref 0 in
     let rec process ts ss time =
-        print_string "["; print_string (to_time time); print_endline "]";
+        print_endline ("[" ^ to_time time ^ "]");
         let ts, ss = arrive time ts ss in
         let ss, finishing = depart ts ss in
         let compute_time t =
             let d = time - start_time input t in
-            print_string "Completion time for "; print_string t;
-            print_string ": "; print_int d; print_newline ();
+            print_string ("Completion time for " ^ t ^ ": ");
+            print_int d; print_newline ();
             d in
         let finish_times = List.map compute_time finishing in
         max_time := List.fold_left max !max_time finish_times;
