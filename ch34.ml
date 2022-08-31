@@ -14,6 +14,17 @@ let input = [|[|"station";"r1";"r2";"r3"|];
               [|"d";"00:46";"00:51";"00:47"|]|]
 *)
 
+(*
+  The challenge text is VERY MISLEADING.
+  While the signs are correct, the text says:
+
+      "Any further ties are broken by route number - e.g. for two trains attempting
+       to originate at station a at the same time on r1 and r2, r1 would enter first."
+
+  But this tie-breaking is only done _among the newly queued trains_, any train that
+  is already queued and of the same last station will come first.
+ *)
+
 let to_int seq =
     let f n c = n * 10 + int_of_char c - int_of_char '0' in
     Seq.fold_left f 0 seq
@@ -36,12 +47,6 @@ type train = Train of string * string * (string * int) list
 (* name, Some (train, time_in), [(waiting_train_name, last_station, original_time); ...] *)
 type station = Station of string * (string * int) option * (string * string * int) list
 
-(* Compares two names of the form "r123" by their number parts *)
-let route_less r1 r2 =
-    let n1 = String.to_seq r1 |> Seq.drop 1 |> to_int
-    and n2 = String.to_seq r2 |> Seq.drop 1 |> to_int
-    in n1 < n2
-
 (* Inserts train t into the waiting queue *)
 let rec insert_queue t qs =
     match t with
@@ -49,8 +54,8 @@ let rec insert_queue t qs =
     | Train (name, last, (_, time) :: stops) ->
             match qs with
             | [] -> [(name, last, time)]
-            | (n, l, _) as q :: qs ->
-                    if last < l || last = l && route_less name n then
+            | (_, l, _) as q :: qs ->
+                    if last < l then
                         (name, last, time) :: q :: qs
                     else
                         q :: insert_queue t qs
@@ -78,7 +83,7 @@ let rec occupied tname = function
 (* Handles the arrival of trains at the specified time *)
 let arrive time ts ss =
     let rec f ss acc = function
-        | [] -> acc, ss
+        | [] -> List.rev acc, ss (* trains should remain in route order *)
         | Train (name, last, nexts) as t :: ts ->
                 match nexts with
                 | [] -> f ss (t :: acc) ts
